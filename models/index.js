@@ -2,6 +2,9 @@ const pool = require("../db/pool");
 
 class Model {
   static tableName;
+  tableName;
+
+  constructor() {}
 
   static async testConnection() {
     const query = "SELECT NOW()";
@@ -12,13 +15,22 @@ class Model {
   static async findAll() {
     const query = `SELECT * FROM "${this.tableName}" ORDER BY id ASC`;
     const result = await pool.query(query);
-    return result.rows;
+    return result.rows.map((r) => {
+      return this.createInstance(r);
+    });
   }
 
   static async findById(id) {
     const query = `SELECT * FROM "${this.tableName}" WHERE id = ${id}`;
     const result = await pool.query(query);
-    return result.rows;
+
+    if (result.rowCount == 0) {
+      throw new Error(`Data not found`);
+    }
+
+    const data = result.rows[0];
+    const instance = this.createInstance(data);
+    return instance;
   }
 
   static async create(data) {
@@ -44,19 +56,21 @@ class Model {
         (${values})
       RETURNING *`;
 
-    console.log(query);
-
     const result = await pool.query(query, Object.values(data));
     return result.rows;
   }
 
   static async remove(id) {
-    const query = `DELETE FROM "${this.tableName}" WHERE id = $1 RETURNING *`;
-    const result = await pool.query(query, [id]);
-    return result.rows;
+    const existingData = await this.findById(id);
+    return existingData.remove();
+    // const query = `DELETE FROM "${this.tableName}" WHERE id = $1 RETURNING *`;
+    // const result = await pool.query(query, [id]); // secara query berhasil
+    // return result.rows;
   }
 
   static async update(id, data) {
+    const existingData = await this.findById(id);
+
     // data = { name: '...'}
     // data = { name: '...', price: '...', stock: 1, categoryId: 1 }
     // tergantung table
@@ -76,10 +90,17 @@ class Model {
       WHERE id = ${id}
       RETURNING *`;
 
-    console.log(query);
-
     const result = await pool.query(query, Object.values(data));
     return result.rows;
+  }
+
+  static createInstance(data) {}
+
+  // instance method
+  async remove() {
+    const query = `DELETE FROM "${this.tableName}" WHERE id = $1 RETURNING *`;
+    const result = await pool.query(query, [this.id]); // secara query berhasil
+    return this;
   }
 }
 
