@@ -1,0 +1,9 @@
+- create directory
+- npm init
+- npm install pg
+- git init
+- create .gitignore
+- put node_modules on .gitignore
+- create index.js
+- create connection to pg
+- test connection
